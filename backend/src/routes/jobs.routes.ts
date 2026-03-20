@@ -75,13 +75,15 @@ jobsRoutes.post('/:jobId/apply', authenticate, requireRole('FREELANCER'), async 
   const already = job.applications?.find((a) => String(a.freelancerId) === req.user!.id)
   if (already) return res.status(409).json({ error: 'ALREADY_APPLIED' })
 
-  job.applications?.push({
+  const applications = job.applications ?? []
+  applications.push({
     freelancerId: req.user!.id as any,
     coverLetter: data.coverLetter,
     bidPaise: data.bidPaise,
     status: 'APPLIED',
     appliedAt: new Date(),
   } as any)
+  job.applications = applications as any
   await job.save()
   return res.json({ ok: true })
 })
@@ -134,7 +136,10 @@ jobsRoutes.post('/:jobId/milestones', authenticate, requireRole('CLIENT'), async
     status: 'AWAITING_FUNDING',
   })
 
-  job.budget.totalAmountPaise += data.amountPaise
+  // Defensive: ensure budget is initialized before incrementing
+  const budget = job.budget ?? ({ currency: 'INR', totalAmountPaise: 0 } as any)
+  budget.totalAmountPaise += data.amountPaise
+  job.budget = budget
   await job.save()
 
   return res.status(201).json({ id: milestone._id })

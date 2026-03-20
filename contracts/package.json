@@ -22,7 +22,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "ethers": "^6.16.0",
-    "@openzeppelin/contracts": "^5.0.2"
+    "@openzeppelin/contracts": "^5.0.2",
+    "ethers": "^6.16.0"
   }
 }

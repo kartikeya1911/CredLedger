@@ -17,15 +17,18 @@ const jobSchema = new Schema(
       index: true,
     },
     selectedFreelancerId: { type: Types.ObjectId, ref: 'User', index: true },
-    applications: [
-      {
-        freelancerId: { type: Types.ObjectId, ref: 'User', required: true },
-        coverLetter: { type: String },
-        bidPaise: { type: Number },
-        status: { type: String, enum: ['APPLIED', 'ACCEPTED', 'REJECTED'], default: 'APPLIED' },
-        appliedAt: { type: Date, default: Date.now },
-      },
-    ],
+    applications: {
+      type: [
+        {
+          freelancerId: { type: Types.ObjectId, ref: 'User', required: true },
+          coverLetter: { type: String },
+          bidPaise: { type: Number },
+          status: { type: String, enum: ['APPLIED', 'ACCEPTED', 'REJECTED'], default: 'APPLIED' },
+          appliedAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
     escrow: {
       escrowId: { type: String },
       chainId: { type: Number, default: 11155111 },
