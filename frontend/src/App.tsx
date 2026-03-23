@@ -6,9 +6,10 @@ import { MarketplacePage } from './pages/Marketplace'
 import { TransactionsPage } from './pages/Transactions'
 import { ProfilePage } from './pages/Profile'
 import { AuthPage } from './pages/AuthPage'
-import { useAuth } from './context/auth'
+import { useAuth } from './context/auth.tsx'
 import { JobDetailPage } from './pages/JobDetail'
 import { TrustPage } from './pages/Trust'
+import { EscrowPage } from './pages/Escrow'
 
 function LoadingScreen() {
   return (
@@ -57,6 +58,7 @@ function App() {
         <Route index element={<DashboardPage />} />
         <Route path="marketplace" element={<MarketplacePage />} />
         <Route path="jobs/:id" element={<JobDetailPage />} />
+        <Route path="escrow/:address" element={<EscrowPage />} />
         <Route path="transactions" element={<TransactionsPage />} />
         <Route path="trust" element={<TrustPage />} />
         <Route path="profile" element={<ProfilePage />} />

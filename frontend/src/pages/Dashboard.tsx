@@ -7,12 +7,12 @@ import { Timeline, type TimelineItem } from '../components/Timeline'
 import { Button } from '../components/ui/Button'
 import { TrustBadge } from '../components/TrustBadge'
 import { formatCurrency } from '../utils/format'
-import { createJob, fetchJobs } from '../api'
+import { createJob, fetchJobs, downloadJobReport } from '../api'
 import type { Job } from '../api/types'
 import { usePolling } from '../hooks/usePolling'
 import { Skeleton } from '../components/Skeleton'
 import { Modal } from '../components/ui/Modal'
-import { useAuth } from '../context/auth'
+import { useAuth } from '../context/auth.tsx'
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -70,7 +70,32 @@ export function DashboardPage() {
           <p className="text-sm text-slate-400">Escrow, trust, and milestones in one place.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary">Download report</Button>
+          <Button
+            variant="secondary"
+            onClick={async () => {
+              if (!jobs[0]?._id) {
+                toast.error('No jobs to download yet')
+                return
+              }
+              try {
+                setLoading(true)
+                const blob = await downloadJobReport(jobs[0]._id)
+                const url = window.URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `job-${jobs[0]._id}-report.json`
+                a.click()
+                window.URL.revokeObjectURL(url)
+                toast.success('Report downloaded')
+              } catch (err: any) {
+                toast.error(err?.response?.data?.error ?? 'Failed to download report')
+              } finally {
+                setLoading(false)
+              }
+            }}
+          >
+            Download report
+          </Button>
           {user?.role === 'CLIENT' && <Button onClick={() => setShowNewJob(true)}>New Job</Button>}
         </div>
       </div>

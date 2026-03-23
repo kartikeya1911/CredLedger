@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Shield, Sparkles } from 'lucide-react'
 import { Button } from '../components/ui/Button'
-import { useAuth } from '../context/auth'
+import { useAuth } from '../context/auth.tsx'
 import type { Role } from '../api/types'
 import toast from 'react-hot-toast'
 

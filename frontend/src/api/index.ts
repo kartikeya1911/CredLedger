@@ -53,6 +53,10 @@ export async function acceptFreelancer(jobId: string, freelancerId: string) {
   await api.post(`/jobs/${jobId}/accept`, { freelancerId })
 }
 
+export async function createJobEscrow(jobId: string, body: { contractAddress: string; txHash: string; chainId?: number }) {
+  await api.post(`/jobs/${jobId}/escrow`, body)
+}
+
 export async function milestoneAction(milestoneId: string, action: string, body?: Record<string, unknown>) {
   await api.post(`/milestones/${milestoneId}/${action}`, body ?? {})
 }
@@ -65,4 +69,14 @@ export async function fetchTransactions(): Promise<Transaction[]> {
   } catch (err) {
     return []
   }
+}
+
+export async function fetchEscrow(contractAddress: string) {
+  const res = await api.get(`/escrow/${contractAddress}`)
+  return res.data as { job: Job; milestones: Milestone[]; transactions: Transaction[] }
+}
+
+export async function downloadJobReport(jobId: string): Promise<Blob> {
+  const res = await api.get(`/reports/job/${jobId}`, { responseType: 'blob' })
+  return res.data as Blob
 }

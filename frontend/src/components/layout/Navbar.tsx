@@ -1,9 +1,12 @@
 import { Bell, Search } from 'lucide-react'
-import { useAuth } from '../../context/auth'
+import { useAuth } from '../../context/auth.tsx'
+import { useWallet } from '../../context/wallet'
 import { formatDate } from '../../utils/format'
 
 export function Navbar() {
   const { user, logout } = useAuth()
+  const { address, connect, connecting } = useWallet()
+  const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
   return (
     <div className="sticky top-0 z-30 mb-6 flex items-center justify-between rounded-2.5xl border border-white/5 bg-white/5 px-5 py-3 backdrop-blur">
       <div className="flex items-center gap-3 text-sm text-slate-300">
@@ -20,6 +23,13 @@ export function Navbar() {
         </div>
         <button className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-200 hover:text-white">
           <Bell size={18} />
+        </button>
+        <button
+          className="rounded-full border border-white/10 bg-aurora/10 px-3 py-1.5 text-xs font-semibold text-aurora hover:bg-aurora/20"
+          onClick={() => void connect()}
+          disabled={connecting}
+        >
+          {connecting ? 'Connecting...' : shortAddress ?? 'Connect wallet'}
         </button>
         {user && (
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm">

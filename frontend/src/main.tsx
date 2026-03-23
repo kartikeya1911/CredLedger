@@ -5,13 +5,16 @@ import { Toaster } from 'react-hot-toast'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './context/auth'
+import { WalletProvider } from './context/wallet'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
-        <Toaster position="top-right" />
+        <WalletProvider>
+          <App />
+          <Toaster position="top-right" />
+        </WalletProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

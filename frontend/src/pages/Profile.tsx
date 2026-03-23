@@ -1,7 +1,7 @@
 import { Shield, UserRound, Activity, BadgeCheck } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { TrustBadge } from '../components/TrustBadge'
-import { useAuth } from '../context/auth'
+import { useAuth } from '../context/auth.tsx'
 
 export function ProfilePage() {
   const { user } = useAuth()

@@ -2,7 +2,9 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { JobModel } from '../models/Job'
 import { MilestoneModel } from '../models/Milestone'
+import { TransactionModel } from '../models/Transaction'
 import { authenticate, requireRole } from '../middlewares/auth.middleware'
+import { verifyFactoryCreation } from '../services/blockchain.service'
 
 export const jobsRoutes = Router()
 
@@ -90,6 +92,9 @@ jobsRoutes.post('/:jobId/apply', authenticate, requireRole('FREELANCER'), async 
 
 const acceptSchema = z.object({
   freelancerId: z.string().min(1),
+  contractAddress: z.string().min(5).optional(),
+  chainId: z.number().int().optional(),
+  txHash: z.string().min(5).optional(),
 })
 
 jobsRoutes.post('/:jobId/accept', authenticate, requireRole('CLIENT'), async (req, res) => {
@@ -104,11 +109,35 @@ jobsRoutes.post('/:jobId/accept', authenticate, requireRole('CLIENT'), async (re
 
   job.selectedFreelancerId = data.freelancerId as any
   job.status = 'IN_PROGRESS'
+  if (data.contractAddress) {
+    job.escrow = {
+      ...job.escrow,
+      contractAddress: data.contractAddress,
+      chainId: data.chainId ?? job.escrow?.chainId,
+    }
+  }
   job.applications = job.applications?.map((a) => ({
     ...a.toObject?.() ?? a,
     status: String(a.freelancerId) === data.freelancerId ? 'ACCEPTED' : 'REJECTED',
   })) as any
   await job.save()
+
+  // Optional: record contract creation tx
+  if (data.txHash) {
+    await TransactionModel.create({
+      type: 'CHAIN_TX',
+      jobId: job._id,
+      userId: req.user!.id,
+      amountPaise: job.budget?.totalAmountPaise ?? 0,
+      status: 'SUCCESS',
+      chain: {
+        chainId: data.chainId ?? job.escrow?.chainId,
+        contractAddress: job.escrow?.contractAddress,
+        txHash: data.txHash,
+        eventName: 'EscrowCreated',
+      },
+    })
+  }
   return res.json({ ok: true })
 })
 
@@ -143,5 +172,48 @@ jobsRoutes.post('/:jobId/milestones', authenticate, requireRole('CLIENT'), async
   await job.save()
 
   return res.status(201).json({ id: milestone._id })
+})
+
+const escrowCreateSchema = z.object({
+  contractAddress: z.string().min(5),
+  txHash: z.string().min(5),
+  chainId: z.number().int().optional(),
+})
+
+jobsRoutes.post('/:jobId/escrow', authenticate, requireRole('CLIENT'), async (req, res) => {
+  const data = escrowCreateSchema.parse(req.body)
+  const job = await JobModel.findById(req.params.jobId)
+  if (!job) return res.status(404).json({ error: 'NOT_FOUND' })
+  if (String(job.clientId) !== req.user!.id) return res.status(403).json({ error: 'FORBIDDEN' })
+
+  if (job.escrow?.contractAddress && job.escrow.contractAddress.toLowerCase() === data.contractAddress.toLowerCase()) {
+    return res.json({ ok: true, contractAddress: job.escrow.contractAddress })
+  }
+
+  const { chainId } = await verifyFactoryCreation({ txHash: data.txHash, expectedEscrow: data.contractAddress })
+
+  const chainIdToStore = chainId ?? data.chainId ?? job.escrow?.chainId
+  job.escrow = {
+    ...(job.escrow ?? ({} as any)),
+    contractAddress: data.contractAddress,
+    chainId: chainIdToStore,
+  }
+  await job.save()
+
+  await TransactionModel.create({
+    type: 'CHAIN_TX',
+    jobId: job._id,
+    userId: req.user!.id,
+    amountPaise: job.budget?.totalAmountPaise ?? 0,
+    status: 'SUCCESS',
+    chain: {
+      chainId: chainIdToStore,
+      contractAddress: data.contractAddress,
+      txHash: data.txHash,
+      eventName: 'EscrowCreated',
+    },
+  })
+
+  return res.json({ ok: true, contractAddress: data.contractAddress })
 })
 
