@@ -1,7 +1,6 @@
 import { clsx } from 'clsx'
-import type { MilestoneStatus } from '../api/types'
 
-const colorMap: Record<MilestoneStatus | 'UNKNOWN', string> = {
+const colorMap: Record<string, string> = {
   DRAFT: 'badge-info',
   AWAITING_FUNDING: 'badge-warning',
   FUNDED_PENDING_CHAIN: 'badge-warning',
@@ -15,9 +14,12 @@ const colorMap: Record<MilestoneStatus | 'UNKNOWN', string> = {
   REFUND_AUTHORIZED: 'badge-warning',
   REFUNDED: 'badge-warning',
   UNKNOWN: 'badge-info',
+  OPEN: 'badge-info',
+  IN_PROGRESS: 'badge-warning',
+  COMPLETED: 'badge-success',
 }
 
 export function StatusPill({ status }: { status?: string }) {
-  const key = (status as MilestoneStatus) ?? 'UNKNOWN'
+  const key = status ?? 'UNKNOWN'
   return <span className={clsx('pill capitalize', colorMap[key] ?? 'badge-info')}>{status?.toLowerCase() ?? 'unknown'}</span>
 }

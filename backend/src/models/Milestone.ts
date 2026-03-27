@@ -32,6 +32,7 @@ const milestoneSchema = new Schema(
       attachments: [{ type: String }],
       submittedAt: { type: Date },
       submitHash: { type: String },
+      submitLink: { type: String },
     },
     approval: {
       approvedAt: { type: Date },

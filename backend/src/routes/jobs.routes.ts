@@ -14,14 +14,14 @@ jobsRoutes.get('/', async (_req, res) => {
 })
 
 const createJobSchema = z.object({
-  title: z.string().min(3),
-  description: z.string().min(10),
+  title: z.string().min(1),
+  description: z.string().min(1),
   skills: z.array(z.string()).default([]),
   totalAmountPaise: z.coerce.number().int().positive().optional(),
   milestones: z
     .array(
       z.object({
-        title: z.string().min(3),
+        title: z.string().min(1),
         description: z.string().optional(),
         amountPaise: z.coerce.number().int().positive(),
       }),
@@ -95,6 +95,7 @@ const acceptSchema = z.object({
   contractAddress: z.string().min(5).optional(),
   chainId: z.number().int().optional(),
   txHash: z.string().min(5).optional(),
+  factoryAddress: z.string().min(5).optional(),
 })
 
 jobsRoutes.post('/:jobId/accept', authenticate, requireRole('CLIENT'), async (req, res) => {
@@ -113,7 +114,8 @@ jobsRoutes.post('/:jobId/accept', authenticate, requireRole('CLIENT'), async (re
     job.escrow = {
       ...job.escrow,
       contractAddress: data.contractAddress,
-      chainId: data.chainId ?? job.escrow?.chainId,
+      chainId: data.chainId ?? job.escrow?.chainId ?? 11155111,
+      factoryAddress: data.factoryAddress ?? job.escrow?.factoryAddress,
     }
   }
   job.applications = job.applications?.map((a) => ({
@@ -131,7 +133,7 @@ jobsRoutes.post('/:jobId/accept', authenticate, requireRole('CLIENT'), async (re
       amountPaise: job.budget?.totalAmountPaise ?? 0,
       status: 'SUCCESS',
       chain: {
-        chainId: data.chainId ?? job.escrow?.chainId,
+        chainId: data.chainId ?? job.escrow?.chainId ?? 11155111,
         contractAddress: job.escrow?.contractAddress,
         txHash: data.txHash,
         eventName: 'EscrowCreated',
@@ -142,7 +144,7 @@ jobsRoutes.post('/:jobId/accept', authenticate, requireRole('CLIENT'), async (re
 })
 
 const addMilestoneSchema = z.object({
-  title: z.string().min(3),
+  title: z.string().min(1),
   description: z.string().optional(),
   amountPaise: z.coerce.number().int().positive(),
 })
@@ -178,6 +180,7 @@ const escrowCreateSchema = z.object({
   contractAddress: z.string().min(5),
   txHash: z.string().min(5),
   chainId: z.number().int().optional(),
+  factoryAddress: z.string().min(5).optional(),
 })
 
 jobsRoutes.post('/:jobId/escrow', authenticate, requireRole('CLIENT'), async (req, res) => {
@@ -190,13 +193,18 @@ jobsRoutes.post('/:jobId/escrow', authenticate, requireRole('CLIENT'), async (re
     return res.json({ ok: true, contractAddress: job.escrow.contractAddress })
   }
 
-  const { chainId } = await verifyFactoryCreation({ txHash: data.txHash, expectedEscrow: data.contractAddress })
+  const { chainId } = await verifyFactoryCreation({
+    txHash: data.txHash,
+    expectedEscrow: data.contractAddress,
+    factoryAddress: data.factoryAddress,
+  })
 
   const chainIdToStore = chainId ?? data.chainId ?? job.escrow?.chainId
   job.escrow = {
     ...(job.escrow ?? ({} as any)),
     contractAddress: data.contractAddress,
     chainId: chainIdToStore,
+    factoryAddress: data.factoryAddress ?? job.escrow?.factoryAddress,
   }
   await job.save()
 

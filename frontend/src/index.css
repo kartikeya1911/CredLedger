@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,10 +6,6 @@
 
 :root {
   color-scheme: dark;
-  background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.15), transparent 35%),
-    radial-gradient(circle at 80% 30%, rgba(34, 211, 238, 0.12), transparent 30%),
-    radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.1), transparent 25%),
-    #050915;
 }
 
 html,
@@ -19,41 +15,106 @@ body,
 }
 
 body {
-  @apply bg-[#050915] text-slate-100 antialiased;
+  background-color: #0F172A;
+  color: #F1F5F9;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  @apply selection:bg-aurora/20 selection:text-aurora;
+*::selection {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818CF8;
 }
 
+/* Glassmorphism Card */
 .glass {
-  @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-card;
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
-.card-grid {
-  @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4;
+@layer components {
+  .card-grid {
+    @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4;
+  }
 }
 
 .gradient-line {
-  background: linear-gradient(90deg, rgba(124, 58, 237, 0.8), rgba(34, 211, 238, 0.8));
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.7), rgba(6, 182, 212, 0.7));
   height: 1px;
   width: 100%;
   border-radius: 9999px;
 }
 
+/* Pill base + badge variants — all raw CSS to avoid @apply issues */
 .pill {
-  @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
 }
 
 .badge-success {
-  @apply pill bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-400/30;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  border-radius: 9999px; padding: 0.25rem 0.75rem;
+  font-size: 0.75rem; line-height: 1rem; font-weight: 500;
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.3);
 }
 .badge-warning {
-  @apply pill bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/30;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  border-radius: 9999px; padding: 0.25rem 0.75rem;
+  font-size: 0.75rem; line-height: 1rem; font-weight: 500;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.3);
 }
 .badge-danger {
-  @apply pill bg-rose-500/15 text-rose-200 ring-1 ring-rose-400/30;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  border-radius: 9999px; padding: 0.25rem 0.75rem;
+  font-size: 0.75rem; line-height: 1rem; font-weight: 500;
+  background: rgba(244, 63, 94, 0.15);
+  color: #fda4af;
+  box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.3);
 }
 .badge-info {
-  @apply pill bg-cyan-500/15 text-cyan-200 ring-1 ring-cyan-400/30;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  border-radius: 9999px; padding: 0.25rem 0.75rem;
+  font-size: 0.75rem; line-height: 1rem; font-weight: 500;
+  background: rgba(6, 182, 212, 0.15);
+  color: #67e8f9;
+  box-shadow: inset 0 0 0 1px rgba(6, 182, 212, 0.3);
+}
+
+/* Reusable input — using @layer so it's compatible with @apply */
+@layer components {
+  .sc-input {
+    @apply w-full rounded-xl border px-3.5 py-2.5 text-sm text-white outline-none transition-all;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+.sc-input::placeholder {
+  color: #64748b;
+}
+.sc-input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Page enter animation */
+.page-enter {
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

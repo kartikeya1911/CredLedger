@@ -10,6 +10,7 @@ import { milestonesRoutes } from './routes/milestones.routes'
 import { escrowRoutes } from './routes/escrow.routes'
 import { reportsRoutes } from './routes/reports.routes'
 import { transactionsRoutes } from './routes/transactions.routes'
+import { statsRoutes } from './routes/stats.routes'
 import { notFound, errorHandler } from './middlewares/error.middleware'
 
 export function createApp() {
@@ -32,6 +33,7 @@ export function createApp() {
   app.use('/api/v1/escrow', escrowRoutes)
   app.use('/api/v1/reports', reportsRoutes)
   app.use('/api/v1/transactions', transactionsRoutes)
+  app.use('/api/v1/stats', statsRoutes)
 
   app.use(notFound)
   app.use(errorHandler)

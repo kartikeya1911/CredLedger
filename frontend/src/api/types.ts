@@ -25,7 +25,7 @@ export type Job = {
   skills?: string[]
   budget?: { currency: string; totalAmountPaise: number }
   applications?: JobApplication[]
-  escrow?: { contractAddress?: string; chainId?: number }
+  escrow?: { contractAddress?: string; chainId?: number; factoryAddress?: string }
   createdAt?: string
 }
 
@@ -51,7 +51,7 @@ export type Milestone = {
   description?: string
   amountPaise: number
   status: MilestoneStatus
-  submission?: { message?: string; submitHash?: string; submittedAt?: string }
+  submission?: { message?: string; submitHash?: string; submittedAt?: string; submitLink?: string }
   approval?: { approvedAt?: string; note?: string }
   chain?: { escrowAddress?: string; milestoneIdOnchain?: number; lastTxHash?: string }
   createdAt?: string

@@ -1,24 +1,24 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Briefcase, Wallet, ShieldCheck, UserRound, Layers } from 'lucide-react'
+import { LayoutDashboard, Briefcase, Wallet, ShieldCheck, UserRound, Code2 } from 'lucide-react'
 
 const nav = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/marketplace', label: 'Marketplace', icon: Briefcase },
-  { to: '/transactions', label: 'Transactions', icon: Wallet },
-  { to: '/trust', label: 'Trust & Risk', icon: ShieldCheck },
-  { to: '/profile', label: 'Profile', icon: UserRound },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/dashboard/marketplace', label: 'Jobs', icon: Briefcase },
+  { to: '/dashboard/transactions', label: 'Transactions', icon: Wallet },
+  { to: '/dashboard/trust', label: 'Trust & Risk', icon: ShieldCheck },
+  { to: '/dashboard/profile', label: 'Profile', icon: UserRound },
 ]
 
 export function Sidebar() {
   return (
-    <aside className="hidden h-full w-64 flex-col rounded-3xl border border-white/5 bg-white/5 p-4 text-sm backdrop-blur lg:flex">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-aurora to-cyber text-white shadow-glow">
-          <Layers size={18} />
+    <aside className="hidden h-full w-64 flex-col rounded-2xl bg-sc-card/60 border border-white/[0.06] p-4 text-sm backdrop-blur lg:flex">
+      <div className="mb-8 flex items-center gap-3 px-2">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-secondary text-white shadow-glow">
+          <Code2 size={16} />
         </div>
         <div>
-          <div className="text-sm font-semibold text-white">CredLedger</div>
-          <div className="text-[11px] text-slate-400">Escrow + Trust</div>
+          <div className="text-sm font-display font-bold text-white">SkillChain</div>
+          <div className="text-[10px] text-muted_text font-medium uppercase tracking-wider">Escrow Platform</div>
         </div>
       </div>
       <div className="space-y-1">
@@ -26,8 +26,13 @@ export function Sidebar() {
           <NavLink
             key={item.to}
             to={item.to}
+            end={item.to === '/dashboard'}
             className={({ isActive }: { isActive: boolean }) =>
-              `flex items-center gap-3 rounded-2xl px-3 py-2 transition hover:bg-white/10 ${isActive ? 'bg-white/10 text-white' : 'text-slate-300'}`
+              `flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${
+                isActive
+                  ? 'bg-primary/10 text-primary-light font-medium'
+                  : 'text-muted_text hover:bg-white/[0.04] hover:text-white'
+              }`
             }
           >
             <item.icon size={16} />
@@ -35,11 +40,12 @@ export function Sidebar() {
           </NavLink>
         ))}
       </div>
-      <div className="mt-auto rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-100">
-        <div className="font-semibold">Sepolia Status</div>
-        <div className="mt-1 flex items-center gap-2 text-[11px]">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" /> Healthy · 12 validators
+      <div className="mt-auto rounded-xl border border-accent/20 bg-accent/5 p-3 text-xs text-accent">
+        <div className="font-semibold flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+          Sepolia Network
         </div>
+        <div className="mt-1 text-[11px] text-muted_text">Chain: Healthy · Live</div>
       </div>
     </aside>
   )

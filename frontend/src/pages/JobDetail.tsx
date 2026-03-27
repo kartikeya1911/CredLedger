@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Send, CheckCircle2, Coins, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Send, CheckCircle2, Coins, ExternalLink, ShieldAlert } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { StatusPill } from '../components/StatusPill'
@@ -14,6 +14,9 @@ import { useContract } from '../hooks/useContract'
 import { Interface } from 'ethers'
 import { escrowFactoryAbi } from '../abi/escrowFactory'
 import toast from 'react-hot-toast'
+import { isAxiosError } from 'axios'
+
+const FACTORY_ADDRESS = import.meta.env.VITE_ESCROW_FACTORY_ADDRESS
 
 export function JobDetailPage() {
   const { id } = useParams()
@@ -32,17 +35,38 @@ export function JobDetailPage() {
   const [freelancerAddress, setFreelancerAddress] = useState('')
   const [arbitratorAddress, setArbitratorAddress] = useState('')
   const [disputeModuleAddress, setDisputeModuleAddress] = useState('')
+  const [submissionLinks, setSubmissionLinks] = useState<Record<string, string>>({})
+  const refreshLock = useRef(false)
+  const lastRefreshRef = useRef(0)
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     if (!id) return
-    const data = await fetchJob(id)
-    setJob(data.job)
-    setMilestones(data.milestones)
-  }
+    const now = Date.now()
+    if (refreshLock.current && now - lastRefreshRef.current < 1200) return
+    if (now - lastRefreshRef.current < 800) return
+    refreshLock.current = true
+    try {
+      const data = await fetchJob(id)
+      setJob(data.job)
+      setMilestones(data.milestones)
+      setSubmissionLinks((prev) => {
+        const next = { ...prev }
+        data.milestones.forEach((m) => {
+          if (m.submission?.submitLink) {
+            next[m._id] = m.submission.submitLink
+          }
+        })
+        return next
+      })
+    } finally {
+      lastRefreshRef.current = Date.now()
+      refreshLock.current = false
+    }
+  }, [id])
 
   useEffect(() => {
     void refresh()
-  }, [id])
+  }, [id, refresh])
 
   useEffect(() => {
     if (address) {
@@ -76,8 +100,9 @@ export function JobDetailPage() {
       await applyToJob(id, coverLetter, bid)
       toast.success('Application sent')
       await refresh()
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error ?? 'Failed')
+    } catch (err: unknown) {
+      const apiError = isAxiosError<{ error?: string }>(err) ? err.response?.data?.error : null
+      toast.error(apiError ?? 'Failed')
     } finally {
       setSubmitting(false)
     }
@@ -105,7 +130,7 @@ export function JobDetailPage() {
         return
       }
       const factory = await getFactoryContract()
-      const amounts = milestones.map((m) => BigInt(m.amountPaise))
+      const amounts = milestones.map((m) => BigInt(m.amountPaise) * 10000000000000n)
       const tx = await factory.createEscrow(
         clientAddress || addr,
         freelancerAddress || addr,
@@ -117,23 +142,29 @@ export function JobDetailPage() {
       const receipt = await tx.wait()
       const iface = new Interface(escrowFactoryAbi)
       const parsed = receipt.logs
-        .map((log: any) => {
+        .map((log: { topics: string[]; data: string }) => {
           try {
             return iface.parseLog(log)
-          } catch (_) {
+          } catch {
             return null
           }
         })
-        .find((p: any) => p && p.name === 'EscrowCreated')
+        .find((p: { name?: string; args?: Record<string, unknown> & { [key: number]: unknown } } | null): p is { name: string; args?: Record<string, unknown> & { [key: number]: unknown } } => Boolean(p && p.name === 'EscrowCreated'))
       const escrowAddress = parsed?.args?.escrow ?? parsed?.args?.[0]
       if (!escrowAddress) throw new Error('Escrow address not found in logs')
       const network = await factory.runner?.provider?.getNetwork()
-      await createJobEscrow(id, { contractAddress: escrowAddress, txHash: tx.hash, chainId: Number(network?.chainId ?? 0) })
+      await createJobEscrow(id, {
+        contractAddress: escrowAddress,
+        txHash: tx.hash,
+        chainId: Number(network?.chainId ?? 0),
+        factoryAddress: FACTORY_ADDRESS,
+      })
       toast.success('Escrow created and saved')
       setTxMessage('Escrow created and saved')
       await refresh()
-    } catch (err: any) {
-      const message = err?.response?.data?.error ?? err?.shortMessage ?? err?.message ?? 'Failed'
+    } catch (err: unknown) {
+      const apiError = isAxiosError<{ error?: string }>(err) ? err.response?.data?.error : null
+      const message = apiError ?? (err instanceof Error ? err.message : 'Failed')
       if (message.toLowerCase().includes('user rejected')) {
         toast.error('Transaction rejected in wallet')
       } else {
@@ -145,11 +176,14 @@ export function JobDetailPage() {
     }
   }
 
-  async function doAction(milestoneId: string, action: string, body?: any) {
-    const needsWallet = ['deposit', 'release', 'refund', 'dispute'].includes(action)
+  async function doAction(milestoneId: string, action: string, body?: Record<string, unknown>) {
+    // Only deposit and dispute are user-signed on-chain (onlyClient / onlyFreelancer in contract)
+    // Release and refund are onlyOperator — handled server-side by the backend
+    const needsWallet = ['deposit', 'dispute'].includes(action)
     try {
       let txHash: string | null = null
       let chainId: number | null = null
+      const submitLink = submissionLinks[milestoneId]?.trim()
       const milestone = milestones.find((m) => m._id === milestoneId)
       if (!milestone) {
         toast.error('Milestone not found')
@@ -168,6 +202,10 @@ export function JobDetailPage() {
         toast.error('Release is only available after approval')
         return
       }
+      if (action === 'submit' && !submitLink) {
+        toast.error('Add a project link before submitting')
+        return
+      }
       if (needsWallet) {
         if (!job?.escrow?.contractAddress) {
           toast.error('Escrow not created yet')
@@ -181,15 +219,11 @@ export function JobDetailPage() {
         }
         const contract = await getEscrowContract(job.escrow.contractAddress)
 
-        const valueWei = BigInt(milestone.amountPaise)
-        let tx: any
+        const valueWei = BigInt(milestone.amountPaise) * 10000000000000n
+        let tx: { wait: () => Promise<{ confirmations?: number }>; hash: string }
 
         if (action === 'deposit') {
           tx = await contract.depositToMilestone(milestone.index, { value: valueWei })
-        } else if (action === 'release') {
-          tx = await contract.releaseToFreelancer(milestone.index)
-        } else if (action === 'refund') {
-          tx = await contract.refundClient(milestone.index)
         } else if (action === 'dispute') {
           tx = await contract.openDispute(milestone.index)
         } else {
@@ -205,18 +239,25 @@ export function JobDetailPage() {
         setTxMessage(`Confirmations: ${confirmations}`)
       }
 
+      // For release/refund, show a loading message (the backend does the on-chain tx)
+      if (action === 'release' || action === 'refund') {
+        setTxMessage('Sending on-chain transaction via server...')
+      }
+
       await milestoneAction(milestoneId, action, {
         ...body,
-        txHash,
-        chainId,
+        submitLink,
+        txHash: txHash ?? undefined,
+        chainId: chainId ?? undefined,
         contractAddress: job?.escrow?.contractAddress,
         fromAddress: address,
       })
       toast.success(`${action} sent`)
-      setTxMessage(needsWallet ? 'Transaction confirmed' : null)
+      setTxMessage(needsWallet || action === 'release' || action === 'refund' ? 'Transaction confirmed' : null)
       await refresh()
-    } catch (err: any) {
-      const message = err?.response?.data?.error ?? err?.shortMessage ?? err?.message ?? 'Failed'
+    } catch (err: unknown) {
+      const apiError = isAxiosError<{ error?: string }>(err) ? err.response?.data?.error : null
+      const message = apiError ?? (err instanceof Error ? err.message : 'Failed')
       if (message.toLowerCase().includes('user rejected')) {
         toast.error('Transaction rejected in wallet')
       } else {
@@ -256,7 +297,7 @@ export function JobDetailPage() {
             icon={<ExternalLink size={14} />}
             onClick={() => {
               if (job.escrow?.contractAddress) {
-                navigate(`/escrow/${job.escrow.contractAddress}`)
+                navigate(`/dashboard/escrow/${job.escrow.contractAddress}`)
               } else {
                 toast.error('Escrow not created yet')
               }
@@ -309,6 +350,21 @@ export function JobDetailPage() {
                     </div>
                   </div>
                 </div>
+                {m.chain?.lastTxHash && (
+                  <div className="mt-2 text-xs text-slate-400 space-y-1">
+                    <div className="flex items-center gap-1">
+                      Last tx: 
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${m.chain.lastTxHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-400 hover:text-emerald-300 hover:underline"
+                      >
+                        {m.chain.lastTxHash.slice(0, 12)}…
+                      </a>
+                    </div>
+                  </div>
+                )}
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
                   {isClient && (
                     <>
@@ -352,13 +408,36 @@ export function JobDetailPage() {
                       </Button>
                     </>
                   )}
+                  {m.submission && (
+                    <div className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-xs text-slate-200">
+                      <div className="font-semibold text-white">Submission</div>
+                      {m.submission.submitLink && (
+                        <a
+                          className="block truncate text-emerald-300 hover:underline"
+                          href={m.submission.submitLink}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Project link: {m.submission.submitLink}
+                        </a>
+                      )}
+                      {m.submission.message && <div className="text-slate-300">Note: {m.submission.message}</div>}
+                      {m.submission.submittedAt && <div className="text-slate-500">Submitted at: {new Date(m.submission.submittedAt).toLocaleString()}</div>}
+                    </div>
+                  )}
                   {user?.role === 'FREELANCER' && (
                     <>
+                      <input
+                        className="w-full rounded-lg bg-white/5 px-2 py-1 text-white placeholder:text-slate-500"
+                        placeholder="Project link (GitHub, demo, live demo)"
+                        value={submissionLinks[m._id] ?? ''}
+                        onChange={(e) => setSubmissionLinks((prev) => ({ ...prev, [m._id]: e.target.value }))}
+                      />
                       <Button
                         size="sm"
                         variant="primary"
                         icon={<Send size={14} />}
-                        onClick={() => doAction(m._id, 'submit', { message: 'Work delivered', submitHash: 'ipfs://hash' })}
+                        onClick={() => doAction(m._id, 'submit', { message: 'Work delivered - link attached', submitHash: 'ipfs://hash' })}
                         disabled={!milestoneGuards[m._id]?.canSubmit}
                         title={!milestoneGuards[m._id]?.canSubmit ? 'Fund milestone before submitting' : ''}
                       >
@@ -424,7 +503,7 @@ export function JobDetailPage() {
               <textarea
                 value={coverLetter}
                 onChange={(e) => setCoverLetter(e.target.value)}
-                className="w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-aurora"
+                className="sc-input"
                 rows={4}
               />
             </div>
@@ -435,7 +514,7 @@ export function JobDetailPage() {
                   type="number"
                   value={bid}
                   onChange={(e) => setBid(Number(e.target.value))}
-                  className="mt-1 w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-aurora"
+                  className="sc-input mt-1"
                 />
               </div>
               <Button className="w-full" onClick={apply} disabled={submitting}>

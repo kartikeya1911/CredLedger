@@ -33,6 +33,7 @@ const jobSchema = new Schema(
       escrowId: { type: String },
       chainId: { type: Number, default: 11155111 },
       contractAddress: { type: String },
+      factoryAddress: { type: String },
     },
   },
   { timestamps: true },

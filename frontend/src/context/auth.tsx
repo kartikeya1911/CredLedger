@@ -35,11 +35,10 @@ const AuthContext = createContext<{
   {
     user: null,
     loading: true,
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    login: async () => {},
-    register: async () => {},
+    login: async () => undefined,
+    register: async () => undefined,
     logout: () => {},
-    refresh: async () => {},
+    refresh: async () => undefined,
   },
 )
 
@@ -58,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthToken(null)
         setBootstrapping(false)
         setLoading(false)
-        navigate('/auth', { replace: true })
+        // Don't navigate — let React Router wrappers handle routing
         return
       }
 
@@ -71,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           throw new Error('Invalid token')
         }
-      } catch (err) {
+      } catch {
         toast.error('Session expired. Please sign in again.')
         setAuthToken(null)
         setToken(null)
@@ -96,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(u)
           setToken(t)
           toast.success('Welcome back')
-          navigate('/', { replace: true })
+          navigate('/dashboard', { replace: true })
         } catch (err) {
           toast.error('Login failed. Check your credentials.')
           throw err
@@ -111,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(u)
           setToken(t)
           toast.success('Account created')
-          navigate('/', { replace: true })
+          navigate('/dashboard', { replace: true })
         } catch (err) {
           toast.error('Registration failed')
           throw err
@@ -148,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext)
 }

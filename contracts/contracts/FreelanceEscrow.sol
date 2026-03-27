@@ -161,7 +161,7 @@ contract FreelanceEscrow is ReentrancyGuard {
 
     function releaseToFreelancer(uint256 milestoneId) external onlyOperator nonReentrant {
         Milestone storage m = _getMilestone(milestoneId);
-        if (m.status != Status.RELEASE_AUTHORIZED && m.status != Status.APPROVED) revert BadState();
+        if (m.status == Status.RELEASED || m.status == Status.REFUNDED) revert BadState();
         m.status = Status.RELEASED;
         _payout(payable(freelancer), m.amount);
         emit MilestoneReleased(milestoneId, m.amount, freelancer);
@@ -173,7 +173,8 @@ contract FreelanceEscrow is ReentrancyGuard {
         if (
             m.status != Status.SUBMITTED &&
             m.status != Status.APPROVED &&
-            m.status != Status.RELEASE_AUTHORIZED
+            m.status != Status.RELEASE_AUTHORIZED &&
+            m.status != Status.FUNDED
         ) {
             revert BadState();
         }
@@ -184,14 +185,14 @@ contract FreelanceEscrow is ReentrancyGuard {
 
     function authorizeRefund(uint256 milestoneId) external onlyOperator {
         Milestone storage m = _getMilestone(milestoneId);
-        if (m.status != Status.FUNDED && m.status != Status.APPROVED && m.status != Status.DISPUTED) revert BadState();
+        if (m.status == Status.RELEASED || m.status == Status.REFUNDED) revert BadState();
         m.status = Status.REFUND_AUTHORIZED;
         emit MilestoneRefundAuthorized(milestoneId, m.amount);
     }
 
     function refundClient(uint256 milestoneId) external onlyOperator nonReentrant {
         Milestone storage m = _getMilestone(milestoneId);
-        if (m.status != Status.REFUND_AUTHORIZED) revert BadState();
+        if (m.status == Status.RELEASED || m.status == Status.REFUNDED) revert BadState();
         m.status = Status.REFUNDED;
         _payout(payable(client), m.amount);
         emit MilestoneRefunded(milestoneId, m.amount, client);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Filter, ArrowRight } from 'lucide-react'
 import { Card } from '../components/ui/Card'
@@ -19,10 +19,6 @@ export function MarketplacePage() {
     const data = await fetchJobs()
     setJobs(data)
   }
-
-  useEffect(() => {
-    void refresh()
-  }, [])
 
   usePolling(refresh, 10000, true)
 
@@ -73,7 +69,7 @@ export function MarketplacePage() {
             </div>
             <div className="mt-3 flex items-center justify-between text-sm">
               <TrustBadge score={78} />
-              <Button size="sm" variant="secondary" className="px-3" onClick={() => navigate(`/jobs/${job._id}`)}>
+              <Button size="sm" variant="secondary" className="px-3" onClick={() => navigate(`/dashboard/jobs/${job._id}`)}>
                 Apply <ArrowRight size={14} />
               </Button>
             </div>

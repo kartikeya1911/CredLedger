@@ -1,5 +1,5 @@
 import { api, setAuthToken } from './client'
-import type { Job, Milestone, Transaction, User } from './types'
+import type { Job, Milestone, Role, Transaction, User } from './types'
 
 export async function login(emailOrPhone: string, password: string) {
   const res = await api.post('/auth/login', { emailOrPhone, password })
@@ -8,7 +8,7 @@ export async function login(emailOrPhone: string, password: string) {
   return { user, token: accessToken }
 }
 
-export async function register(role: string, email: string, password: string) {
+export async function register(role: Role, email: string, password: string) {
   await api.post('/auth/register', { role, email, password })
   return login(email, password)
 }
@@ -17,7 +17,7 @@ export async function fetchMe(): Promise<User | null> {
   try {
     const res = await api.get('/auth/me')
     return res.data as User
-  } catch (err) {
+  } catch {
     return null
   }
 }
@@ -53,7 +53,7 @@ export async function acceptFreelancer(jobId: string, freelancerId: string) {
   await api.post(`/jobs/${jobId}/accept`, { freelancerId })
 }
 
-export async function createJobEscrow(jobId: string, body: { contractAddress: string; txHash: string; chainId?: number }) {
+export async function createJobEscrow(jobId: string, body: { contractAddress: string; txHash: string; chainId?: number; factoryAddress?: string }) {
   await api.post(`/jobs/${jobId}/escrow`, body)
 }
 
@@ -66,7 +66,7 @@ export async function fetchTransactions(): Promise<Transaction[]> {
   try {
     const res = await api.get('/transactions')
     return res.data.items as Transaction[]
-  } catch (err) {
+  } catch {
     return []
   }
 }
@@ -79,4 +79,43 @@ export async function fetchEscrow(contractAddress: string) {
 export async function downloadJobReport(jobId: string): Promise<Blob> {
   const res = await api.get(`/reports/job/${jobId}`, { responseType: 'blob' })
   return res.data as Blob
+}
+
+export type DashboardStats = {
+  metrics: {
+    totalVolume: number
+    activeJobs: number
+    completedJobs: number
+    pendingMilestones: number
+    releasedMilestones: number
+    disputedMilestones: number
+    totalJobs: number
+  }
+  trustScore: number
+  signals: Array<{ text: string; positive: boolean }>
+  decisions: Array<{ title: string; description: string; status: string; date: string }>
+  bridge: {
+    healthy: boolean
+    chainTxCount: number
+    totalTxCount: number
+    latestTxAt: string | null
+    fraudAlerts: number
+  }
+  profile: {
+    jobsCompleted: number
+    totalJobs: number
+    totalEarned: number
+    totalSpent: number
+    rating: number
+    reviewCount: number
+  }
+}
+
+export async function fetchDashboardStats(): Promise<DashboardStats | null> {
+  try {
+    const res = await api.get('/stats/dashboard')
+    return res.data as DashboardStats
+  } catch {
+    return null
+  }
 }

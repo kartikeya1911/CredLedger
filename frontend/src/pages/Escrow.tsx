@@ -7,6 +7,7 @@ import { fetchEscrow } from '../api'
 import type { Job, Milestone, Transaction } from '../api/types'
 import { Timeline, type TimelineItem } from '../components/Timeline'
 import toast from 'react-hot-toast'
+import { isAxiosError } from 'axios'
 
 export function EscrowPage() {
   const { address } = useParams()
@@ -23,8 +24,9 @@ export function EscrowPage() {
         setJob(res.job)
         setMilestones(res.milestones)
         setTransactions(res.transactions)
-      } catch (err: any) {
-        toast.error(err?.response?.data?.error ?? 'Escrow not found')
+      } catch (err: unknown) {
+        const apiError = isAxiosError<{ error?: string }>(err) ? err.response?.data?.error : null
+        toast.error(apiError ?? 'Escrow not found')
       } finally {
         setLoading(false)
       }
@@ -78,9 +80,33 @@ export function EscrowPage() {
                   </div>
                 </div>
               </div>
-              <div className="mt-2 text-xs text-slate-400">
-                {m.chain?.escrowAddress && <div>Escrow: {m.chain.escrowAddress}</div>}
-                {m.chain?.lastTxHash && <div>Last tx: {m.chain.lastTxHash.slice(0, 12)}…</div>}
+              <div className="mt-2 text-xs text-slate-400 space-y-1">
+                {m.chain?.escrowAddress && (
+                  <div className="flex items-center gap-1">
+                    Escrow: 
+                    <a
+                      href={`https://sepolia.etherscan.io/address/${m.chain.escrowAddress}#internaltx`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-emerald-400 hover:text-emerald-300 hover:underline"
+                    >
+                      {m.chain.escrowAddress}
+                    </a>
+                  </div>
+                )}
+                {m.chain?.lastTxHash && (
+                  <div className="flex items-center gap-1">
+                    Last tx: 
+                    <a
+                      href={`https://sepolia.etherscan.io/tx/${m.chain.lastTxHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-emerald-400 hover:text-emerald-300 hover:underline"
+                    >
+                      {m.chain.lastTxHash.slice(0, 12)}…
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           ))}

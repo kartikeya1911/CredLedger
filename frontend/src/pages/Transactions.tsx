@@ -28,30 +28,30 @@ export function TransactionsPage() {
   usePolling(refresh, 10000, true)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 page-enter">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white">Transactions</h2>
-          <p className="text-sm text-slate-400">UPI and on-chain events with audit trail.</p>
+          <h2 className="text-xl font-display font-bold text-white">Transactions</h2>
+          <p className="text-sm text-muted_text">UPI and on-chain events with full audit trail.</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
-          <Wallet2 size={14} className="inline mr-2" /> Bridge synced
+        <div className="rounded-xl border border-accent/20 bg-accent/5 px-3 py-2 text-xs text-accent font-medium">
+          <Wallet2 size={14} className="inline mr-2" />Bridge synced
         </div>
       </div>
       <Card>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="text-left text-slate-400">
+            <thead className="text-left text-muted_text text-xs uppercase tracking-wider">
               <tr>
-                <th className="py-2">Type</th>
-                <th className="py-2">Amount</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Chain</th>
-                <th className="py-2">Date</th>
-                <th className="py-2 text-right">Action</th>
+                <th className="py-3 font-medium">Type</th>
+                <th className="py-3 font-medium">Amount</th>
+                <th className="py-3 font-medium">Status</th>
+                <th className="py-3 font-medium">Chain</th>
+                <th className="py-3 font-medium">Date</th>
+                <th className="py-3 text-right font-medium">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-slate-200">
+            <tbody className="divide-y divide-white/[0.04] text-slate-200">
               {loading && (
                 <tr>
                   <td colSpan={6} className="py-4">
@@ -61,26 +61,26 @@ export function TransactionsPage() {
               )}
               {!loading && txs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-4 text-center text-sm text-slate-500">
+                  <td colSpan={6} className="py-8 text-center text-sm text-muted_text">
                     No transactions yet.
                   </td>
                 </tr>
               )}
               {txs.map((tx) => (
-                <tr key={tx._id} className="">
-                  <td className="py-3 capitalize">{tx.type.toLowerCase()}</td>
-                  <td className="py-3">{formatCurrency(tx.amountPaise)}</td>
-                  <td className="py-3"><StatusPill status={tx.status} /></td>
-                  <td className="py-3 text-xs text-slate-400">{tx.chain?.txHash?.slice(0, 10) ?? '—'}</td>
-                  <td className="py-3 text-xs text-slate-400">{formatDate(tx.createdAt)}</td>
-                  <td className="py-3 text-right">
+                <tr key={tx._id} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="py-3.5 capitalize">{tx.type.toLowerCase()}</td>
+                  <td className="py-3.5 font-medium">{formatCurrency(tx.amountPaise)}</td>
+                  <td className="py-3.5"><StatusPill status={tx.status} /></td>
+                  <td className="py-3.5 text-xs text-muted_text font-mono">{tx.chain?.txHash?.slice(0, 10) ?? '—'}</td>
+                  <td className="py-3.5 text-xs text-muted_text">{formatDate(tx.createdAt)}</td>
+                  <td className="py-3.5 text-right">
                     <a
                       href={tx.chain?.txHash ? `https://sepolia.etherscan.io/tx/${tx.chain.txHash}` : '#'}
-                      className="text-aurora hover:text-cyber"
+                      className="text-primary-light hover:text-secondary transition-colors text-xs font-medium"
                       target="_blank"
                       rel="noreferrer"
                     >
-                      View <ExternalLink size={14} className="inline" />
+                      View <ExternalLink size={12} className="inline" />
                     </a>
                   </td>
                 </tr>

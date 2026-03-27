@@ -1,4 +1,4 @@
-import { BrowserProvider, Contract } from 'ethers'
+import { BrowserProvider, Contract, type Eip1193Provider } from 'ethers'
 import toast from 'react-hot-toast'
 import { freelanceEscrowAbi } from '../abi/freelanceEscrow'
 import { escrowFactoryAbi } from '../abi/escrowFactory'
@@ -6,9 +6,11 @@ import { useWallet } from '../context/wallet'
 
 const FACTORY_ADDRESS = import.meta.env.VITE_ESCROW_FACTORY_ADDRESS
 
-function getEthereum(): typeof window.ethereum {
+function getEthereum(): Eip1193Provider {
   if (typeof window === 'undefined') throw new Error('No window')
-  return (window as any).ethereum
+  const ethereum = window.ethereum as Eip1193Provider | undefined
+  if (!ethereum) throw new Error('METAMASK_MISSING')
+  return ethereum
 }
 
 export function useContract() {

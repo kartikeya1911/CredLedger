@@ -21,9 +21,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken')
       delete api.defaults.headers.common.Authorization
-      if (window.location.pathname !== '/auth') {
-        window.location.href = '/auth'
-      }
+      // Don't hard-redirect; let React Router handle it
     }
     return Promise.reject(error)
   },

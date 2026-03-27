@@ -8,39 +8,39 @@ export function Navbar() {
   const { address, connect, connecting } = useWallet()
   const shortAddress = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
   return (
-    <div className="sticky top-0 z-30 mb-6 flex items-center justify-between rounded-2.5xl border border-white/5 bg-white/5 px-5 py-3 backdrop-blur">
-      <div className="flex items-center gap-3 text-sm text-slate-300">
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          Live on Sepolia
+    <div className="sticky top-0 z-30 mb-6 flex items-center justify-between rounded-xl border border-white/[0.06] bg-sc-card/60 px-5 py-3 backdrop-blur-xl">
+      <div className="flex items-center gap-3 text-sm text-muted_text">
+        <div className="flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-3 py-1.5 text-xs text-accent font-medium">
+          <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+          Sepolia
         </div>
-        <span className="hidden text-xs text-slate-500 md:inline">{formatDate(new Date().toISOString())}</span>
+        <span className="hidden text-xs text-muted_text md:inline">{formatDate(new Date().toISOString())}</span>
       </div>
       <div className="flex items-center gap-3">
-        <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-300 md:flex">
-          <Search size={16} />
-          <input className="bg-transparent outline-none placeholder:text-slate-500" placeholder="Search jobs, tx, users" />
+        <div className="hidden items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-sm text-muted_text md:flex">
+          <Search size={14} />
+          <input className="bg-transparent outline-none placeholder:text-slate-500 w-40" placeholder="Search..." />
         </div>
-        <button className="rounded-full border border-white/10 bg-white/5 p-2 text-slate-200 hover:text-white">
-          <Bell size={18} />
+        <button className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5 text-muted_text hover:text-white transition-colors">
+          <Bell size={16} />
         </button>
         <button
-          className="rounded-full border border-white/10 bg-aurora/10 px-3 py-1.5 text-xs font-semibold text-aurora hover:bg-aurora/20"
+          className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary-light hover:bg-primary/20 transition-all"
           onClick={() => void connect()}
           disabled={connecting}
         >
-          {connecting ? 'Connecting...' : shortAddress ?? 'Connect wallet'}
+          {connecting ? 'Connecting...' : shortAddress ?? 'Connect Wallet'}
         </button>
         {user && (
-          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-aurora to-cyber text-center text-xs font-semibold leading-8 text-white">
+          <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-sm">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-secondary text-center text-xs font-semibold leading-8 text-white">
               {user.email?.[0]?.toUpperCase() ?? user.phone?.[0] ?? 'U'}
             </div>
-            <div>
+            <div className="hidden md:block">
               <div className="text-xs font-semibold text-white">{user.email || user.phone}</div>
-              <div className="text-[11px] text-slate-400">{user.role}</div>
+              <div className="text-[10px] text-muted_text">{user.role}</div>
             </div>
-            <button className="text-[11px] text-rose-300" onClick={logout}>
+            <button className="text-[11px] text-rose-400 hover:text-rose-300 transition-colors" onClick={logout}>
               Logout
             </button>
           </div>

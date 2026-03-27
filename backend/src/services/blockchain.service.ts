@@ -1,4 +1,4 @@
-import { Interface, JsonRpcProvider, type Log } from 'ethers'
+import { Contract, Interface, JsonRpcProvider, Wallet, type Log } from 'ethers'
 import { env } from '../config/env'
 // Import ABI locally to avoid runtime path issues
 import escrowArtifact from '../../../contracts/artifacts/contracts/FreelanceEscrow.sol/FreelanceEscrow.json'
@@ -9,6 +9,89 @@ export type ExpectedEvent = 'MilestoneFunded' | 'MilestoneReleased' | 'Milestone
 const provider = new JsonRpcProvider(env.SEPOLIA_RPC_URL)
 const iface = new Interface(escrowArtifact.abi)
 const factoryIface = new Interface(factoryArtifact.abi)
+
+/* ─── Operator wallet for on-chain calls that require onlyOperator ─── */
+
+function getOperatorWallet() {
+  if (!env.OPERATOR_PRIVATE_KEY) throw new Error('OPERATOR_PRIVATE_KEY not configured')
+  if (!env.SEPOLIA_RPC_URL) throw new Error('SEPOLIA_RPC_URL not configured')
+  return new Wallet(env.OPERATOR_PRIVATE_KEY, provider)
+}
+
+function getEscrowContract(escrowAddress: string) {
+  const wallet = getOperatorWallet()
+  return new Contract(escrowAddress, escrowArtifact.abi, wallet)
+}
+
+/**
+ * Server-side release: authorizeRelease (if needed) → releaseToFreelancer
+ * Both are onlyOperator in the contract.
+ */
+export async function operatorRelease(escrowAddress: string, milestoneIndex: number) {
+  const contract = getEscrowContract(escrowAddress)
+
+  // Read current on-chain status
+  const [, statusNum] = await contract.getMilestone(milestoneIndex)
+  const status = Number(statusNum)
+  // Status enum: CREATED=0, FUNDED=1, SUBMITTED=2, APPROVED=3, RELEASE_AUTHORIZED=4, RELEASED=5, DISPUTED=6, REFUND_AUTHORIZED=7, REFUNDED=8
+
+  if (status === 5) throw new Error('ALREADY_RELEASED')
+  if (status === 8) throw new Error('ALREADY_REFUNDED')
+
+  // Release: skip authorize if already authorized
+  if (status !== 4) {
+    // Optionally authorize if needed by the specific contract version deployed
+    try {
+      const authTx = await contract.authorizeRelease(milestoneIndex)
+      await authTx.wait()
+    } catch {
+      // Ignore if contract doesn't need authorization
+    }
+  }
+
+  const tx = await contract.releaseToFreelancer(milestoneIndex)
+  const receipt = await tx.wait()
+  const network = await provider.getNetwork()
+  return {
+    txHash: tx.hash,
+    chainId: Number(network.chainId),
+    confirmations: receipt?.confirmations ?? 1,
+  }
+}
+
+/**
+ * Server-side refund: authorizeRefund (if needed) → refundClient
+ * Both are onlyOperator in the contract.
+ */
+export async function operatorRefund(escrowAddress: string, milestoneIndex: number) {
+  const contract = getEscrowContract(escrowAddress)
+
+  // Read current on-chain status
+  const [, statusNum] = await contract.getMilestone(milestoneIndex)
+  const status = Number(statusNum)
+
+  if (status === 8) throw new Error('ALREADY_REFUNDED')
+  if (status === 5) throw new Error('ALREADY_RELEASED')
+
+  // Refund: skip authorize if already authorized
+  if (status !== 7) {
+    try {
+      const authTx = await contract.authorizeRefund(milestoneIndex)
+      await authTx.wait()
+    } catch {
+      // Ignore
+    }
+  }
+
+  const tx = await contract.refundClient(milestoneIndex)
+  const receipt = await tx.wait()
+  const network = await provider.getNetwork()
+  return {
+    txHash: tx.hash,
+    chainId: Number(network.chainId),
+    confirmations: receipt?.confirmations ?? 1,
+  }
+}
 
 function addressesEqual(a?: string | null, b?: string | null) {
   return (a ?? '').toLowerCase() === (b ?? '').toLowerCase()
@@ -28,7 +111,7 @@ export async function verifyEscrowTransaction(params: {
 
   const receipt = await provider.getTransactionReceipt(params.txHash)
   if (!receipt) throw new Error('TX_NOT_FOUND')
-  const statusOk = receipt.status === 1 || receipt.status === 1n
+  const statusOk = receipt.status === 1
   if (!statusOk) throw new Error('TX_FAILED')
   if (!addressesEqual(receipt.to, params.contractAddress)) throw new Error('TX_TO_MISMATCH')
 
@@ -56,15 +139,17 @@ export async function verifyEscrowTransaction(params: {
 export async function verifyFactoryCreation(params: {
   txHash: string
   expectedEscrow: string
+  factoryAddress?: string
 }) {
-  if (!env.ESCROW_FACTORY_ADDRESS) throw new Error('ESCROW_FACTORY_ADDRESS not configured')
+  const factoryAddress = params.factoryAddress ?? env.ESCROW_FACTORY_ADDRESS
+  if (!factoryAddress) throw new Error('ESCROW_FACTORY_ADDRESS not configured')
   const receipt = await provider.getTransactionReceipt(params.txHash)
   if (!receipt) throw new Error('TX_NOT_FOUND')
-  const statusOk = receipt.status === 1 || receipt.status === 1n
+  const statusOk = receipt.status === 1
   if (!statusOk) throw new Error('TX_FAILED')
-  if (!addressesEqual(receipt.to, env.ESCROW_FACTORY_ADDRESS)) throw new Error('TX_TO_MISMATCH')
+  if (!addressesEqual(receipt.to, factoryAddress)) throw new Error('TX_TO_MISMATCH')
 
-  const parsed = findFactoryEvent(receipt.logs, env.ESCROW_FACTORY_ADDRESS)
+  const parsed = findFactoryEvent(receipt.logs, factoryAddress)
   if (!parsed) throw new Error('EVENT_NOT_FOUND')
   const escrowAddress = parsed.args?.escrow ?? parsed.args?.[0]
   if (!addressesEqual(escrowAddress, params.expectedEscrow)) throw new Error('ESCROW_ADDRESS_MISMATCH')
