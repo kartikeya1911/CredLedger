@@ -9,7 +9,7 @@ import { WalletProvider } from './context/wallet'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AuthProvider>
         <WalletProvider>
           <App />
