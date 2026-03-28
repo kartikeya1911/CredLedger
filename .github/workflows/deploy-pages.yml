@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Linux rolldown binding
+        run: npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.0-rc.10
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
